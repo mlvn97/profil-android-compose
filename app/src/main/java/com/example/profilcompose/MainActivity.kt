@@ -20,29 +20,39 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarOutline
+import androidx.compose.material.icons.rounded.AccountCircle
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import com.example.profilcompose.ui.theme.ProfilComposeTheme
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.AccountCircle
-import androidx.compose.material3.Icon
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.profilcompose.ui.theme.ProfilComposeTheme
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -51,8 +61,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             ProfilComposeTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    DeveloperScreen(
-                        projects = getProjects(),
+                    ProfileContainer(
                         modifier = Modifier.padding(innerPadding)
                     )
                 }
@@ -199,7 +208,12 @@ fun getProjects(): List<Project> {
 }
 
 @Composable
-fun ProjectCard(project: Project, technologies: List<Technology>, modifier: Modifier = Modifier) {
+fun ProjectCard(
+    project: Project,
+    technologies: List<Technology>,
+    isFavorite: Boolean,
+    onFavoriteClick: (Int) -> Unit,
+    modifier: Modifier = Modifier) {
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
@@ -219,6 +233,13 @@ fun ProjectCard(project: Project, technologies: List<Technology>, modifier: Modi
                 style = MaterialTheme.typography.bodyMedium
             )
             TechnologiesSection(technologies)
+            Button(onClick = {onFavoriteClick(project.id)}) {
+                Icon(
+                    imageVector = if (isFavorite) Icons.Default.Star else Icons.Default.StarOutline,
+                    contentDescription = "Favori",
+                    tint = MaterialTheme.colorScheme.onPrimary
+                )
+            }
         }
     }
 }
@@ -257,9 +278,47 @@ fun SendImage(modifier: Modifier = Modifier) {
     )
 }
 
+// CONTACT SECTION
+@Composable
+fun ContactSection(info: String, modifier: Modifier = Modifier) {
+    var showContactInfo by rememberSaveable {
+        mutableStateOf(false)
+    }
+    Column(
+        modifier = modifier.padding(top = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Button(onClick = { showContactInfo = !showContactInfo }, colors = ButtonColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.secondary,
+            disabledContainerColor = Color.Gray,
+            disabledContentColor = Color.Gray
+        )) {
+            Text(
+                text = if (showContactInfo) "Masquer les informations de contact"
+                else "Afficher les informations de contact"
+            )
+        }
+
+        if (showContactInfo) {
+            ContactInformation(info)
+            ContactButton()
+        }
+    }
+}
+
 // SCREENS
 @Composable
-fun DeveloperScreen(projects: List<Project>, modifier: Modifier = Modifier) {
+fun DeveloperScreen(
+    projects: List<Project>,
+    modifier: Modifier = Modifier,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    favProjectsIds: List<Int>,
+    onFavoriteClick: (Int) -> Unit,
+    showFavorites: Boolean,
+    onShowFavoritesClick: () -> Unit
+) {
     LazyColumn(
         modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
         contentPadding = PaddingValues(16.dp),
@@ -282,67 +341,160 @@ fun DeveloperScreen(projects: List<Project>, modifier: Modifier = Modifier) {
             )
         }
 
+        item {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = onSearchQueryChange,
+                label = { Text(text = "Rechercher un projet") },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(5.dp))
+            Text(
+                text = "${projects.size} projet(s) affiché(s)",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+
+        item {
+            Button(onClick = onShowFavoritesClick, colors = ButtonColors(
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.secondary,
+                disabledContainerColor = Color.Gray,
+                disabledContentColor = Color.Gray
+            )) {
+                Text(
+                    text = if (showFavorites) "Afficher tous les projets"
+                           else "Afficher les projets favoris"
+                )
+            }
+        }
+
         items(items = projects, key = { p -> p.id}) { p ->
-            ProjectCard(project = p, technologies = p.technologies)
+            ProjectCard(
+                project = p,
+                technologies = p.technologies,
+                isFavorite = favProjectsIds.contains(p.id),
+                onFavoriteClick = { onFavoriteClick(p.id) }
+            )
         }
 
         item {
-            Spacer(Modifier.height(20.dp))
-            ContactInformation(info = "m.didier@myskolae.fr")
-        }
-
-        item {
-            ContactButton()
+            ContactSection(info = "m.didier@myskolae.fr")
         }
 
     }
 }
 
 // View Model
-class ProfileViewModel(): ViewModel() {
+class ProfileViewModel: ViewModel() {
     private val allProjects: List<Project> = getProjects()
-    var searchQuery by mutableStateOf("")
-        private set
 
-    var favProjectsIds by mutableStateOf(listOf<Int>())
-        private set
+    private val _uiState = MutableStateFlow(ProjectUiState(projects = allProjects))
 
-    val filteredProjects: List<Project>
-        get() = allProjects.filter { project ->
+    val uiState: StateFlow<ProjectUiState> = _uiState.asStateFlow()
+
+    private fun filterProjects(
+        searchQuery: String,
+        showOnlyFavorites: Boolean,
+        favProjectsIds: List<Int>
+    ): List<Project> {
+        return allProjects.filter { project ->
             val matches = project.title.contains(searchQuery, ignoreCase = true) ||
                     project.technologies.any { it.name.contains(searchQuery, ignoreCase = true) }
-            matches
+
+            val matchesFavorites = !showOnlyFavorites || favProjectsIds.contains(project.id)
+            matches && matchesFavorites
         }
+    }
 
     fun onSearchQueryChange(newValue: String) {
-        searchQuery = newValue
+        _uiState.update { currentState ->
+            currentState.copy(
+                searchQuery = newValue,
+                projects = filterProjects(
+                    searchQuery = newValue,
+                    showOnlyFavorites = currentState.showOnlyFavorites,
+                    favProjectsIds = currentState.favProjectsIds
+                )
+            )
+        }
     }
 
     fun onFavoriteClick(projectId: Int) {
-        favProjectsIds = if (favProjectsIds.contains(projectId)) favProjectsIds - projectId
-                         else favProjectsIds + projectId
+        _uiState.update { currentState ->
+            val newFavIds =
+                if (currentState.favProjectsIds.contains(projectId))
+                    currentState.favProjectsIds - projectId
+                else currentState.favProjectsIds + projectId
+
+            currentState.copy(
+                favProjectsIds = newFavIds,
+                projects = filterProjects(
+                    searchQuery = currentState.searchQuery,
+                    showOnlyFavorites = currentState.showOnlyFavorites,
+                    favProjectsIds = newFavIds
+                )
+            )
+        }
+    }
+
+    fun onShowOnlyFavoritesClick() {
+        _uiState.update { currentState ->
+            val newValue = !currentState.showOnlyFavorites
+
+            currentState.copy(
+                showOnlyFavorites = newValue,
+                projects = filterProjects(
+                    searchQuery = currentState.searchQuery,
+                    showOnlyFavorites = newValue,
+                    favProjectsIds = currentState.favProjectsIds)
+            )
+        }
     }
 }
 
-// STATES
+// CONTAINER
 @Composable
 fun ProfileContainer(
     modifier: Modifier = Modifier,
     viewModel: ProfileViewModel = viewModel()
 ) {
+    val uiState by viewModel.uiState.collectAsState()
     DeveloperScreen(
-        projects = viewModel.filteredProjects,
-        modifier = modifier
+        projects = uiState.projects,
+        modifier = modifier,
+        searchQuery = uiState.searchQuery,
+        onSearchQueryChange = {viewModel.onSearchQueryChange(it)},
+        favProjectsIds = uiState.favProjectsIds,
+        onFavoriteClick = {viewModel.onFavoriteClick(it)},
+        showFavorites = uiState.showOnlyFavorites,
+        onShowFavoritesClick = {viewModel.onShowOnlyFavoritesClick()}
     )
 }
 
-// PREVIEWS
+// UI STATE
+data class ProjectUiState(
+    val projects: List<Project> = emptyList(),
+    val searchQuery: String = "",
+    val showOnlyFavorites: Boolean = false,
+    val favProjectsIds: List<Int> = emptyList()
+)
 
+// PREVIEWS
 @Preview(showBackground = true)
 @Composable
 fun DeveloperProfilePreview() {
     ProfilComposeTheme {
-        ProfileContainer()
+        DeveloperScreen(
+            projects = getProjects(),
+            searchQuery = "",
+            onSearchQueryChange = {},
+            favProjectsIds = listOf(),
+            onFavoriteClick = {},
+            showFavorites = false,
+            onShowFavoritesClick = {}
+        )
     }
 }
 
@@ -350,6 +502,14 @@ fun DeveloperProfilePreview() {
 @Composable
 fun DarkDeveloperProfilePreview() {
     ProfilComposeTheme(darkTheme = true) {
-        ProfileContainer()
+        DeveloperScreen(
+            projects = getProjects(),
+            searchQuery = "Java",
+            onSearchQueryChange = {},
+            favProjectsIds = listOf(1, 2),
+            onFavoriteClick = {},
+            showFavorites = true,
+            onShowFavoritesClick = {}
+        )
     }
 }
