@@ -21,15 +21,15 @@ private val LightColorScheme = lightColorScheme(
     tertiary = Color(0xFF008B9A),
 
     background = Color(0xFFF8FAFC),
-    surface = Color(0xFFE8EDF5),
+    surface = Color(0xFFE1EAFA),
     onSurface = Color(0xFF465468),
 
     onPrimary = Color.White,
-    onSecondary = Color.White,
+    onSecondary = Color(0xFFEEEEEE),
     onTertiary = Color.White,
     onBackground = Color(0xFF172033),
 
-    primaryContainer = Color(0xFFDBEAFE),
+    primaryContainer = Color(0xFFBCE5F8),
     onPrimaryContainer = Color(0xFF1E3A8A),
 )
 

@@ -18,8 +18,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -36,8 +36,13 @@ import com.example.profilcompose.ui.theme.ProfilComposeTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccountCircle
 import androidx.compose.material3.Icon
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.res.painterResource
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -47,7 +52,7 @@ class MainActivity : ComponentActivity() {
             ProfilComposeTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     DeveloperScreen(
-                        experiences = professionalExperiences(),
+                        projects = getProjects(),
                         modifier = Modifier.padding(innerPadding)
                     )
                 }
@@ -57,10 +62,16 @@ class MainActivity : ComponentActivity() {
 }
 
 // DATA CLASS
-data class Experience (
+data class Project (
     val id: Int,
     val title: String,
-    val description: String
+    val description: String,
+    val technologies: List<Technology>
+)
+
+data class Technology (
+    val id: Int,
+    val name: String
 )
 
 // PROFILE
@@ -114,63 +125,81 @@ fun ProfileBox(name: String, role: String, description: String, modifier: Modifi
     }
 }
 
-// SKILLS
+// TECHNOLOGIES
 @Composable
-fun Skill(skill: String, modifier: Modifier = Modifier) {
+fun TechnologyChip(tech: Technology, modifier: Modifier = Modifier) {
     Surface(
         modifier = modifier.padding(bottom = 6.dp),
         shape = MaterialTheme.shapes.small,
-        color = MaterialTheme.colorScheme.surface,
+        color = MaterialTheme.colorScheme.onSecondary,
         shadowElevation = 5.dp
     ) {
         Text(
-            text = skill,
+            text = tech.name,
             style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
         )
     }
 }
 
 @Composable
-fun SkillsSection(modifier: Modifier = Modifier) {
+fun TechnologiesSection(technologies: List<Technology>, modifier: Modifier = Modifier) {
     Column(modifier = modifier) {
         Text(
-            text = "Compétences & Expériences",
+            text = "Technologies utilisées",
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.secondary
         )
         Spacer(modifier = Modifier.height(8.dp))
-        Row {
-            Skill(skill = "Java")
-            Spacer(modifier = Modifier.weight(1f))
-            Skill(skill = "Angular")
-            Spacer(modifier = Modifier.weight(1f))
-            Skill(skill = "Spring Boot")
-            Spacer(modifier = Modifier.weight(1f))
-            Skill(skill = "Android")
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            contentPadding = PaddingValues(5.dp)) {
+            items(items = technologies, key = {t -> t.id}) { t ->
+                TechnologyChip(tech = t)
+            }
         }
     }
 }
 
-// PROFESSIONAL EXPERIENCES
-fun professionalExperiences(): List<Experience> {
+fun techFirstProject(): List<Technology> {
     return listOf(
-        Experience(
+        Technology(id = 1, name = "Python"),
+        Technology(id = 2, name = "Tkinter"),
+        Technology(id = 3, name = "NumPy")
+    )
+}
+
+fun techSecondProject(): List<Technology> {
+    return listOf(
+        Technology(id = 1, name = "Java"),
+        Technology(id = 2, name = "Angular"),
+        Technology(id = 3, name = "Spring Boot")
+    )
+}
+
+// PROJECTS
+fun getProjects(): List<Project> {
+    return listOf(
+        Project(
             id = 1,
-            title = "Employé de station-service",
-            description = "Entretien de la station, nettoyage des pompes, mise en rayon," +
-                            " gestion de colis"
+            title = "Projet développement Python",
+            description = "Projet qui consiste à développer une interface graphique avec Tkinter" +
+                            " permettant de suivre la trajectoire d'un objet dans une vidéo.",
+            technologies = techFirstProject()
         ),
-        Experience(
+        Project(
             id = 2,
-            title = "Expérience complémentaire",
-            description = "La description d'une expérience qui sert d'exemple"
+            title = "Projet Java Fullstack",
+            description = "Projet de développement Java/Angular qui consiste à développer un" +
+                            " chatbot à l'aide d'agents IA.",
+            technologies = techSecondProject()
         )
     )
 }
 
 @Composable
-fun ExperienceCard(experience: Experience, modifier: Modifier = Modifier) {
+fun ProjectCard(project: Project, technologies: List<Technology>, modifier: Modifier = Modifier) {
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
@@ -182,13 +211,14 @@ fun ExperienceCard(experience: Experience, modifier: Modifier = Modifier) {
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                text = experience.title,
+                text = project.title,
                 style = MaterialTheme.typography.titleLarge
             )
             Text(
-                text = experience.description,
+                text = project.description,
                 style = MaterialTheme.typography.bodyMedium
             )
+            TechnologiesSection(technologies)
         }
     }
 }
@@ -212,14 +242,14 @@ fun ContactButton(modifier: Modifier = Modifier) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(text = "Contacter", style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.width(10.dp))
-            ProfileImage()
+            SendImage()
         }
     }
 }
 
 // IMAGE
 @Composable
-fun ProfileImage(modifier: Modifier = Modifier) {
+fun SendImage(modifier: Modifier = Modifier) {
     Image(
         painter = painterResource(id = android.R.drawable.ic_menu_send),
         contentDescription = "Envoyer",
@@ -229,7 +259,7 @@ fun ProfileImage(modifier: Modifier = Modifier) {
 
 // SCREENS
 @Composable
-fun DeveloperScreen(experiences: List<Experience>, modifier: Modifier = Modifier) {
+fun DeveloperScreen(projects: List<Project>, modifier: Modifier = Modifier) {
     LazyColumn(
         modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
         contentPadding = PaddingValues(16.dp),
@@ -252,12 +282,8 @@ fun DeveloperScreen(experiences: List<Experience>, modifier: Modifier = Modifier
             )
         }
 
-        item {
-            SkillsSection()
-        }
-
-        items(items = experiences, key = {exp -> exp.id}) { experience ->
-            ExperienceCard(experience = experience)
+        items(items = projects, key = { p -> p.id}) { p ->
+            ProjectCard(project = p, technologies = p.technologies)
         }
 
         item {
@@ -272,13 +298,51 @@ fun DeveloperScreen(experiences: List<Experience>, modifier: Modifier = Modifier
     }
 }
 
+// View Model
+class ProfileViewModel(): ViewModel() {
+    private val allProjects: List<Project> = getProjects()
+    var searchQuery by mutableStateOf("")
+        private set
+
+    var favProjectsIds by mutableStateOf(listOf<Int>())
+        private set
+
+    val filteredProjects: List<Project>
+        get() = allProjects.filter { project ->
+            val matches = project.title.contains(searchQuery, ignoreCase = true) ||
+                    project.technologies.any { it.name.contains(searchQuery, ignoreCase = true) }
+            matches
+        }
+
+    fun onSearchQueryChange(newValue: String) {
+        searchQuery = newValue
+    }
+
+    fun onFavoriteClick(projectId: Int) {
+        favProjectsIds = if (favProjectsIds.contains(projectId)) favProjectsIds - projectId
+                         else favProjectsIds + projectId
+    }
+}
+
+// STATES
+@Composable
+fun ProfileContainer(
+    modifier: Modifier = Modifier,
+    viewModel: ProfileViewModel = viewModel()
+) {
+    DeveloperScreen(
+        projects = viewModel.filteredProjects,
+        modifier = modifier
+    )
+}
+
+// PREVIEWS
+
 @Preview(showBackground = true)
 @Composable
 fun DeveloperProfilePreview() {
     ProfilComposeTheme {
-        DeveloperScreen(
-            experiences = professionalExperiences()
-        )
+        ProfileContainer()
     }
 }
 
@@ -286,8 +350,6 @@ fun DeveloperProfilePreview() {
 @Composable
 fun DarkDeveloperProfilePreview() {
     ProfilComposeTheme(darkTheme = true) {
-        DeveloperScreen(
-            experiences = professionalExperiences()
-        )
+        ProfileContainer()
     }
 }
